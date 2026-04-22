@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "appfirewall-fastapi"
+version = "0.1.0"
+description = "Origin-side abuse signal middleware for FastAPI apps behind Cloudflare. Part of AppFirewall by Sireto."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Sireto" }]
+keywords = ["fastapi", "cloudflare", "security", "abuse", "middleware", "appfirewall", "waf"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.24",
+    "starlette>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.21",
+    "pytest-benchmark>=4.0",
+    "hypothesis>=6.80",
+    "fastapi>=0.100",
+    "mypy>=1.5",
+    "ruff>=0.1",
+]
+
+[project.urls]
+Homepage = "https://appfirewall.io"
+Documentation = "https://appfirewall.io/docs"
+Repository = "https://github.com/sireto/appfirewall-fastapi"
+Issues = "https://github.com/sireto/appfirewall-fastapi/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/appfirewall_fastapi"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC"]
