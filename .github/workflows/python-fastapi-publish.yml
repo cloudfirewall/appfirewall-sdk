@@ -1,20 +1,28 @@
-name: Publish to PyPI
+name: Publish appfirewall-fastapi to PyPI
 
-# Publishes appfirewall-fastapi to PyPI when a GitHub Release is published.
+# Publishes the Python FastAPI SDK on a tagged GitHub Release whose tag starts
+# with `python-fastapi-v` (e.g. `python-fastapi-v0.2.0`). Per-SDK tag prefixes
+# keep release lines for different SDKs (Python/Java/Node) independent.
+#
 # Uses PyPI trusted publishing (OIDC) — no API token secret required.
 # One-time setup on PyPI: https://pypi.org/manage/account/publishing/
-#   Owner: sireto   Repo: appfirewall-fastapi
-#   Workflow: publish.yml   Environment: pypi
+#   Owner: sireto   Repo: appfirewall-sdk
+#   Workflow: python-fastapi-publish.yml   Environment: pypi-fastapi
 
 on:
   release:
     types: [published]
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: python/appfirewall-fastapi
+
 jobs:
   verify:
     name: Run checks
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'python-fastapi-v')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,14 +68,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: python/appfirewall-fastapi/dist/
 
   publish:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: pypi-fastapi
       url: https://pypi.org/p/appfirewall-fastapi
     permissions:
       id-token: write  # required for trusted publishing

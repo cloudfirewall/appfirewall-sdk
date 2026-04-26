@@ -1,136 +1,81 @@
-# appfirewall-fastapi
+# appfirewall-sdk
 
-Origin-side abuse signal middleware for FastAPI apps behind Cloudflare.
+Monorepo for **AppFirewall** SDKs — origin-side abuse-signal middleware that
+sits inside customer applications, observes app-layer signals the CDN can't
+see, and ships them out-of-band to the AppFirewall ingest service.
 
-Part of the **[AppFirewall][af]** platform by Sireto. Cloudflare protects your
-edge; AppFirewall sees what your CDN can't — parse failures, auth failures, and
-application-layer abuse signals at your origin — and closes the loop back to
-the edge.
+Part of the **[AppFirewall][af]** platform by Sireto.
 
 [af]: https://appfirewall.io
 
-> **Status:** v0.1, pre-release. The public API (`AppFirewallMiddleware`,
-> `appfirewall.record`) is stable; internals may change.
+## SDKs in this repo
 
-## Install
-
-```bash
-pip install appfirewall-fastapi
-```
-
-## Quick start
-
-```python
-from fastapi import FastAPI
-from appfirewall_fastapi import AppFirewallMiddleware
-
-app = FastAPI()
-app.add_middleware(
-    AppFirewallMiddleware,
-    api_key="afw_live_...",   # or set APPFIREWALL_API_KEY
-)
-```
-
-That's it. The middleware will:
-
-- Resolve the real client IP from `cf-connecting-ip` (validated against
-  Cloudflare's published IP ranges — never spoofable from outside).
-- Classify 404s as `scanner` / `benign-miss` / `unknown` using a pattern
-  library of known probes (`/wp-admin`, `/.env`, `/.git/config`,
-  path-traversal, etc.).
-- Ship events in batches (2s / 500 events, gzipped JSONL) to the AppFirewall
-  ingest endpoint out-of-band, so your request path is never blocked.
-
-## Recording app-layer signals
-
-The value `AppFirewall` provides over edge-only protection comes from signals
-your app can see but Cloudflare can't. Use `appfirewall.record()` inside your
-handlers:
-
-```python
-from fastapi import HTTPException, UploadFile
-from appfirewall_fastapi import appfirewall
-
-@app.post("/upload")
-async def upload(file: UploadFile):
-    try:
-        parsed = parse_flint(await file.read())
-    except ParseError as e:
-        appfirewall.record("upload.parse_failed", reason=str(e))
-        raise HTTPException(400, "invalid format")
-    appfirewall.record("upload.success", size=len(parsed))
-    return {"ok": True}
-```
-
-`record()` is synchronous, non-blocking, and never raises — safe to sprinkle
-anywhere. Outside a request, it's a silent no-op.
-
-## Configuration
-
-All options can be passed as keyword arguments to `add_middleware` or set via
-environment variables.
-
-| Option | Env var | Default | Purpose |
+| Status | SDK | Path | Package |
 |---|---|---|---|
-| `api_key` | `APPFIREWALL_API_KEY` | *(none)* | Bearer token. If unset, `mode` forces to `"off"`. |
-| `endpoint` | `APPFIREWALL_ENDPOINT` | `https://ingest.appfirewall.io/v1/events` | Override for self-hosted ingest. |
-| `environment` | — | `None` | Tag attached to every event. Useful for `production`/`staging`. |
-| `mode` | — | `"ship"` | `"ship"` \| `"local"` \| `"off"`. |
-| `local_log_path` | — | `None` | In `mode="local"`, write JSONL to this path instead of shipping. |
-| `trusted_proxies` | — | `("cloudflare",)` | Accept `cf-connecting-ip` / XFF from these peers. |
-| `classify_404` | — | `True` | Classify unknown 404s into scanner / benign / unknown. |
-| `rate_limit` | — | `{"scanner": (10, 60.0)}` | Per-class limits: max per window, window seconds. |
-| `enforce_rate_limit` | — | `False` | If True, send 429 when an IP exceeds its per-class limit in-process. Off by default — enforcement belongs at the edge. |
-| `on_error` | — | `"ignore"` | `"ignore"` \| `"warn"` \| `"raise"`. |
+| ✅ Shipping (alpha) | Python / FastAPI | [`python/appfirewall-fastapi/`](./python/appfirewall-fastapi/) | [`appfirewall-fastapi`](https://pypi.org/p/appfirewall-fastapi) |
+| 📐 Spec drafted | Java / Spring Boot | [spec](./docs/specs/appfirewall-spring-boot.md) | `io.appfirewall:appfirewall-spring-boot-starter` |
+| 🔮 Planned | Python / Django, Node / Express, Node / Hono, Ruby / Rails | — | — |
 
-## Fail-open guarantees
+The **FastAPI SDK is the reference implementation.** When behaviour is
+ambiguous in another SDK, the FastAPI code is the source of truth. Wire
+format, classifier patterns, IP-resolution semantics, and event schema must
+stay byte-compatible across all SDKs — a single ingest service serves them
+all.
 
-This middleware is deliberately conservative:
+## What every SDK does
 
-- If the middleware crashes, your app still serves the request.
-- If ingest is down, events are buffered and dropped silently when the buffer
-  fills. A circuit breaker prevents retry storms.
-- If the API key is missing, `mode` flips to `"off"` with a single warning.
-- `appfirewall.record()` never raises, never blocks, never awaits.
-- Request latency overhead target: **<1ms p99**.
+1. Observes requests at the application layer.
+2. Resolves the real client IP, validating forwarded headers against the
+   socket peer (never spoofable from outside).
+3. Classifies 404s as `scanner` / `benign-miss` / `unknown` using a curated
+   pattern set (WordPress probes, dotfile probes, path traversal, etc.).
+4. Exposes a synchronous `record(event, fields)` API for app-layer signals
+   (auth failures, parse failures, business events).
+5. Ships events in gzipped JSONL batches, out-of-band, with a circuit
+   breaker.
+6. **Fails open.** A bug in the SDK never breaks the customer's app.
 
-The tradeoff: the SDK's default is observation, not enforcement. Blocking bad
-actors happens at the Cloudflare edge via the AppFirewall control plane, which
-this SDK feeds. This is the design. For local enforcement in emergencies,
-set `enforce_rate_limit=True`.
+## Repository layout
 
-## Local development
-
-Point `mode="local"` at a file on disk to iterate without an ingest endpoint:
-
-```python
-app.add_middleware(
-    AppFirewallMiddleware,
-    api_key="dev",
-    mode="local",
-    local_log_path="/tmp/appfirewall.jsonl",
-)
+```
+appfirewall-sdk/
+├── AGENTS.md / CLAUDE.md          ← cross-SDK guide for AI agents
+├── ROADMAP.md                     ← shipped / next / later, across all SDKs
+├── HANDOFF.md                     ← historical state-of-the-world
+├── docs/
+│   ├── CONTRIBUTING.md            ← shared PR workflow
+│   └── specs/                     ← forward-looking specs for un-built SDKs
+├── .github/workflows/
+│   └── <lang>-<framework>-publish.yml   ← one release pipeline per SDK
+└── python/
+    └── appfirewall-fastapi/       ← the FastAPI SDK
 ```
 
-Tail the file to watch events as your app runs:
+The directory name of each SDK matches its published artifact name. New
+SDKs land under their language directory (`java/`, `node/`, …) following
+the same shape as the FastAPI SDK.
 
-```bash
-tail -f /tmp/appfirewall.jsonl | jq .
-```
+## Working on an SDK
 
-## Development
+`cd` into the SDK directory and follow its own README. Each SDK owns its
+toolchain (Python uses hatchling + pytest + mypy + ruff; Java will use
+Gradle; etc.).
 
-```bash
-pip install -e ".[dev]"
-pytest
-mypy src/
-ruff check src/
-```
+For cross-SDK PR conventions and the project's Golden Rules see
+[`AGENTS.md`](./AGENTS.md) and [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md).
 
-All three must pass. See [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) for
-the PR workflow and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the
-module layout and design decisions. If you're an AI coding agent, start with
-[`AGENTS.md`](./AGENTS.md).
+## Releases
+
+Each SDK has its own release line. Tags use a per-SDK prefix so the
+monorepo can ship one SDK without affecting another:
+
+| SDK | Tag prefix | Example |
+|---|---|---|
+| `appfirewall-fastapi` | `python-fastapi-v` | `python-fastapi-v0.2.0` |
+
+The release workflow in `.github/workflows/python-fastapi-publish.yml`
+fires on a GitHub Release whose tag matches that prefix, runs the SDK's
+test/typecheck/lint, builds, and publishes via PyPI trusted publishing.
 
 ## License
 

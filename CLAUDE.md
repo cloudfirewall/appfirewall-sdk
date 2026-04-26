@@ -8,10 +8,11 @@ covers only things that are Claude Code-specific.
 
 ## Reading order for a fresh session
 
-1. [`AGENTS.md`](./AGENTS.md) — project conventions, Golden Rules, commands.
-2. [`HANDOFF.md`](./HANDOFF.md) — current state of the world.
+1. [`AGENTS.md`](./AGENTS.md) — cross-SDK conventions, Golden Rules, repo layout.
+2. [`HANDOFF.md`](./HANDOFF.md) — historical state-of-the-world (one-time doc).
 3. [`ROADMAP.md`](./ROADMAP.md) — what's shipped vs. next.
-4. [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — how modules fit together.
+4. The SDK directory you're working on (e.g. `python/appfirewall-fastapi/`):
+   its `README.md` first, then `docs/ARCHITECTURE.md`.
 5. The specific module(s) you're touching.
 
 Don't try to read the whole codebase before starting. The modules are small
@@ -21,9 +22,13 @@ Don't try to read the whole codebase before starting. The modules are small
 
 ## Working in this repo with Claude Code
 
-### Commands at the top of the session
+This is a multi-SDK monorepo. Most tasks live entirely inside one SDK
+directory — `cd` into it before running its toolchain.
+
+### Commands at the top of a FastAPI-SDK session
 
 ```bash
+cd python/appfirewall-fastapi
 pip install -e ".[dev]"
 pytest && mypy src/ && ruff check src/ tests/
 ```
@@ -33,7 +38,7 @@ starting on the actual task.
 
 ### Before marking a task done
 
-Run the full check again:
+Run the full check again from inside the SDK directory:
 
 ```bash
 pytest && mypy src/ && ruff check src/ tests/

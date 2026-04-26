@@ -5,7 +5,7 @@ ingest. Use it to exercise the ingest + portal end-to-end.
 
 ## Setup
 
-From the repo root:
+From `python/appfirewall-fastapi/` (the SDK directory in this monorepo):
 
 ```bash
 pip install -e ".[dev]"

@@ -52,6 +52,23 @@ Issues = "https://github.com/sireto/appfirewall-fastapi/issues"
 
 [tool.hatch.version]
 source = "vcs"
+# Per-SDK tag prefix so the monorepo can release each SDK independently.
+# Tag like `python-fastapi-v0.2.0` to ship 0.2.0.
+tag-pattern = '^python-fastapi-v(?P<version>[^-]+)$'
+
+[tool.hatch.version.raw-options]
+# pyproject.toml lives two directories deep in the monorepo
+# (python/appfirewall-fastapi/), but the .git directory is at the top.
+root = "../.."
+search_parent_directories = true
+# Restrict git describe to this SDK's tag prefix so unrelated tags from
+# sibling SDKs (or legacy `v*` tags) don't confuse version derivation.
+git_describe_command = [
+    "git", "describe", "--dirty", "--tags", "--long",
+    "--match", "python-fastapi-v*",
+]
+# Used when no matching tag exists yet (first release pending).
+fallback_version = "0.0.0+local"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/appfirewall_fastapi"]

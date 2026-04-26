@@ -3,25 +3,53 @@
 Guide for AI coding agents (Claude Code, Cursor, Codex, Aider, Devin, etc.)
 working on this repository.
 
-This file is the **single source of truth** for project conventions. If you're
-an agent reading this, start here. Human-facing docs live in `README.md`,
-`ROADMAP.md`, and `docs/`.
+This file is the **single source of truth** for cross-SDK conventions. If
+you're an agent reading this, start here, then read the SDK-specific
+`README.md` / `docs/ARCHITECTURE.md` inside the SDK directory you're working
+on. Human-facing docs live at the repo root (`README.md`, `ROADMAP.md`,
+`docs/`) and in each SDK directory.
 
 ---
 
 ## What this project is
 
-`appfirewall-fastapi` is the Python/FastAPI SDK for the **AppFirewall**
-platform by Sireto. It's ASGI middleware that sits inside a customer's FastAPI
-app and:
+`appfirewall-sdk` is the monorepo for **AppFirewall** SDKs (a Sireto
+platform). Each SDK is middleware that sits inside a customer's web
+application and:
 
 1. Observes requests at the application layer (what the CDN can't see).
 2. Classifies 404s (scanner / benign-miss / unknown) and records outcomes.
-3. Exposes `appfirewall.record(event, **fields)` for app-layer signals.
+3. Exposes a `record(event, fields)` API for app-layer signals.
 4. Ships events in batches to the AppFirewall ingest service, out of band.
 
-The full product story is in `docs/ARCHITECTURE.md`. Marketing pitch is on the
-public site; don't worry about that here.
+Across SDKs the **wire format, classifier patterns, IP-resolution semantics,
+and event schema must stay byte-compatible.** A single ingest service serves
+all of them.
+
+### Repository layout
+
+```
+appfirewall-sdk/
+├── README.md / AGENTS.md / CLAUDE.md / ROADMAP.md / LICENSE
+├── docs/
+│   ├── CONTRIBUTING.md          ← shared PR workflow
+│   └── specs/                   ← forward-looking specs for un-built SDKs
+├── .github/workflows/
+│   └── <lang>-<framework>-publish.yml   ← one per SDK, path-filtered
+├── python/
+│   └── appfirewall-fastapi/     ← reference implementation, ships today
+│       ├── README.md
+│       ├── pyproject.toml
+│       ├── docs/ARCHITECTURE.md
+│       ├── src/, tests/, example/
+└── (java/, node/, etc. — added as new SDKs land)
+```
+
+The directory name of each SDK matches its published artifact name. The
+FastAPI SDK is the **reference implementation**: when behaviour is ambiguous
+in another SDK, the FastAPI code is the source of truth.
+
+The marketing pitch is on the public site; don't worry about that here.
 
 ---
 
@@ -54,20 +82,16 @@ These are non-negotiable product commitments. Every change must preserve them.
 
 ---
 
-## Repo layout
+## SDK layout (FastAPI reference)
+
+The Python/FastAPI SDK lives at `python/appfirewall-fastapi/`:
 
 ```
-appfirewall-fastapi/
-├── AGENTS.md              ← this file
-├── CLAUDE.md              ← Claude Code-specific notes (thin, references AGENTS.md)
+python/appfirewall-fastapi/
 ├── README.md              ← end-user install/usage
-├── ROADMAP.md             ← what's shipped, what's next
-├── HANDOFF.md             ← one-time state-of-the-world for the next contributor
-├── LICENSE                ← Apache-2.0
 ├── pyproject.toml         ← package metadata, tool config (ruff, mypy, pytest)
 ├── docs/
-│   ├── ARCHITECTURE.md    ← module layout + key design decisions
-│   └── CONTRIBUTING.md    ← PR workflow, coding standards
+│   └── ARCHITECTURE.md    ← module layout + key design decisions
 ├── src/appfirewall_fastapi/
 │   ├── __init__.py        ← public API: AppFirewallMiddleware, appfirewall
 │   ├── _middleware.py     ← ASGI middleware class
@@ -81,27 +105,33 @@ appfirewall-fastapi/
 │   ├── _cf_ranges.py      ← Cloudflare IP range registry + refresh
 │   ├── _shield.py         ← _Shield class + appfirewall singleton
 │   └── py.typed           ← PEP 561 marker
-└── tests/
-    ├── conftest.py
-    ├── test_classifier.py
-    ├── test_ip.py
-    ├── test_ratelimit.py
-    ├── test_middleware.py ← end-to-end via ASGI
-    └── test_fail_open.py  ← failure-injection tests
+├── tests/
+│   ├── conftest.py
+│   ├── test_classifier.py
+│   ├── test_ip.py
+│   ├── test_ratelimit.py
+│   ├── test_middleware.py ← end-to-end via ASGI
+│   └── test_fail_open.py  ← failure-injection tests
+└── example/               ← runnable demo app
 ```
 
 All non-public modules are prefixed with `_`. Do not import from `_*` modules
 in tests you add — import from the package root (`from appfirewall_fastapi
 import ...`) where possible.
 
+New SDKs follow the same shape under their own language directory (e.g.
+`java/appfirewall-spring-boot/`). Forward-looking specs live in
+`docs/specs/`.
+
 ---
 
-## Commands you'll use
+## Commands you'll use (FastAPI SDK)
 
-All commands assume your working directory is the repo root.
+All commands assume your working directory is `python/appfirewall-fastapi/`.
 
 ### Setup
 ```bash
+cd python/appfirewall-fastapi
 pip install -e ".[dev]"
 ```
 
