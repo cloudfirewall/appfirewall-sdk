@@ -53,9 +53,19 @@ htmlcov/
 *.jsonl
 events.log
 
+# Java / Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
+hs_err_pid*.log
+
 # IDE / editor
 .vscode/
 .idea/
+*.iml
+*.ipr
+*.iws
 *.swp
 *.swo
 *~

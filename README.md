@@ -13,7 +13,7 @@ Part of the **[AppFirewall][af]** platform by Sireto.
 | Status | SDK | Path | Package |
 |---|---|---|---|
 | ✅ Shipping (alpha) | Python / FastAPI | [`python/appfirewall-fastapi/`](./python/appfirewall-fastapi/) | [`appfirewall-fastapi`](https://pypi.org/p/appfirewall-fastapi) |
-| 📐 Spec drafted | Java / Spring Boot | [spec](./docs/specs/appfirewall-spring-boot.md) | `io.appfirewall:appfirewall-spring-boot-starter` |
+| 🚧 In progress | Java / Spring Boot | [`java/appfirewall-spring-boot/`](./java/appfirewall-spring-boot/) | `io.appfirewall:appfirewall-spring-boot-starter` |
 | 🔮 Planned | Python / Django, Node / Express, Node / Hono, Ruby / Rails | — | — |
 
 The **FastAPI SDK is the reference implementation.** When behaviour is
