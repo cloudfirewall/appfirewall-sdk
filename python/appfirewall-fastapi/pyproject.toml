@@ -68,6 +68,10 @@ git_describe_command = [
     "git", "describe", "--dirty", "--tags", "--long",
     "--match", "python-fastapi-v*",
 ]
+# PyPI rejects PEP 440 local-version segments (the `+gSHA` part). Drop it
+# so non-tag builds (e.g. workflow_dispatch from main between releases)
+# still produce uploadable pre-release versions like `0.1.2.dev6`.
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/appfirewall_fastapi"]

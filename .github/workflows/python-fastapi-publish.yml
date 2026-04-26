@@ -74,6 +74,10 @@ jobs:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
+    # Only publish on a real GitHub Release whose tag carries this SDK's
+    # prefix. workflow_dispatch runs still build + verify (useful for
+    # testing CI), but never reach PyPI.
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'python-fastapi-v')
     environment:
       name: pypi-fastapi
       url: https://pypi.org/p/appfirewall-fastapi
