@@ -14,6 +14,12 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Opt the v4/v5 JavaScript actions into Node 24 ahead of the June 2026
+# deprecation of Node 20. Same flag the GitHub deprecation notice
+# recommends; remove once Node 24 is the runner default.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 defaults:
   run:
     working-directory: python/appfirewall-fastapi
