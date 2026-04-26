@@ -14,12 +14,6 @@ on:
     types: [published]
   workflow_dispatch:
 
-# Opt the v4/v5 JavaScript actions into Node 24 ahead of the June 2026
-# deprecation of Node 20. Same flag the GitHub deprecation notice
-# recommends; remove once Node 24 is the runner default.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 defaults:
   run:
     working-directory: python/appfirewall-fastapi
@@ -30,11 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'python-fastapi-v')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # hatch-vcs reads git tags to derive the version
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -57,11 +51,11 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # hatch-vcs reads git tags to derive the version
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -71,7 +65,7 @@ jobs:
           python -m build
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist
           path: python/appfirewall-fastapi/dist/
@@ -89,7 +83,7 @@ jobs:
 
     steps:
       - name: Download dist artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist
           path: dist/
