@@ -74,10 +74,15 @@ jobs:
           version="${tag#java-spring-boot-v}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Publish
+      - name: Publish bundle to Sonatype Central Portal
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: gradle publish -PappfirewallVersion=${{ steps.version.outputs.version }} --no-daemon
+        # publishAggregationToCentralPortal collects every subproject's
+        # signed artifacts (jar + sources + javadoc + pom + module) into a
+        # single zip bundle and uploads it to the Central Portal API. With
+        # publishingType=USER_MANAGED the bundle waits in the Portal UI for
+        # a human to click "Publish".
+        run: gradle publishAggregationToCentralPortal -PappfirewallVersion=${{ steps.version.outputs.version }} --no-daemon

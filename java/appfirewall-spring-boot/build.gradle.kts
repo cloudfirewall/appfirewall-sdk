@@ -3,6 +3,27 @@
 
 plugins {
     java
+    // Uploads each subproject's signed artifacts as a single bundle to the
+    // Sonatype Central Portal (https://central.sonatype.com/). Replaces the
+    // legacy OSSRH Nexus 2 file-by-file deploy, which now returns 402 for
+    // accounts provisioned on the Portal.
+    id("com.gradleup.nmcp.aggregation") version "1.4.4"
+}
+
+// nmcp-aggregation resolves its helper artifacts at the root project level.
+repositories {
+    mavenCentral()
+}
+
+nmcpAggregation {
+    centralPortal {
+        username.set(providers.environmentVariable("OSSRH_USERNAME"))
+        password.set(providers.environmentVariable("OSSRH_PASSWORD"))
+        // USER_MANAGED → upload, then a human "Publishes" via the Portal UI.
+        // Switch to AUTOMATIC once we trust the pipeline.
+        publishingType.set("USER_MANAGED")
+    }
+    publishAllProjectsProbablyBreakingProjectIsolation()
 }
 
 allprojects {
@@ -78,23 +99,9 @@ subprojects {
             }
         }
 
-        repositories {
-            maven {
-                name = "ossrh"
-                url = uri(
-                        if (version.toString().endsWith("SNAPSHOT"))
-                            "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                        else
-                            "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-                )
-                credentials {
-                    username = (findProperty("ossrhUsername") as String?)
-                            ?: System.getenv("OSSRH_USERNAME") ?: ""
-                    password = (findProperty("ossrhPassword") as String?)
-                            ?: System.getenv("OSSRH_PASSWORD") ?: ""
-                }
-            }
-        }
+        // No `repositories {}` block: uploads go through the Central Portal
+        // via the nmcp-aggregation plugin at the root project, which collects
+        // each subproject's signed artifacts and ships them as a single bundle.
     }
 
     extensions.configure<SigningExtension> {
