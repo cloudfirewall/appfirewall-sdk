@@ -1,21 +1,21 @@
 package io.appfirewall.spring;
 
 import io.appfirewall.core.config.Mode;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Spring Boot {@code @ConfigurationProperties} POJO bound to the
- * {@code appfirewall.*} keys.
- *
- * <p>Defaults must match the FastAPI SDK exactly; see spec §4.1.
- *
- * <p>TODO(v0.1): annotate with {@code @ConfigurationProperties("appfirewall")}
- * once the {@code spring-boot} dep is on the classpath at runtime; for now
- * this is a plain POJO so the core module can compile without Spring.
+ * Configuration bound to {@code appfirewall.*}. Defaults match the FastAPI
+ * SDK exactly; see spec §4.1.
  */
+@ConfigurationProperties("appfirewall")
 public class AppFirewallProperties {
+
+    /** Enable/disable the entire SDK. Defaults to enabled. */
+    private boolean enabled = true;
 
     private String apiKey;
     private String endpoint = "https://ingest.appfirewall.io/v1/events";
@@ -24,9 +24,15 @@ public class AppFirewallProperties {
     private String localLogPath;
     private List<String> trustedProxies = List.of("cloudflare");
     private boolean classify404 = true;
-    private Map<String, RateLimit> rateLimit = Map.of("scanner", new RateLimit(10, 60.0));
+    private Map<String, RateLimit> rateLimit = defaultRateLimit();
     private boolean enforceRateLimit = false;
     private OnError onError = OnError.IGNORE;
+
+    private static Map<String, RateLimit> defaultRateLimit() {
+        Map<String, RateLimit> m = new LinkedHashMap<>();
+        m.put("scanner", new RateLimit(10, 60.0));
+        return m;
+    }
 
     public static final class RateLimit {
         private int max;
@@ -46,6 +52,8 @@ public class AppFirewallProperties {
     public enum OnError { IGNORE, WARN, RAISE }
 
     // ----- getters/setters -----------------------------------------------
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public String getApiKey() { return apiKey; }
     public void setApiKey(String apiKey) { this.apiKey = apiKey; }
     public String getEndpoint() { return endpoint; }

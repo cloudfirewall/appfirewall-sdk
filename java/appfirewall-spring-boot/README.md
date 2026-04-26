@@ -4,9 +4,10 @@ Origin-side abuse-signal middleware for Spring Boot apps behind Cloudflare.
 Sibling of [`appfirewall-fastapi`](../../python/appfirewall-fastapi/) in the
 [`appfirewall-sdk`](../../) monorepo.
 
-> **Status:** v0.1 in progress &mdash; scaffolding + pure-logic ports
-> (`PathClassifier`, `CircuitBreaker`) landed; filters, IP resolver,
-> buffer/shipper, autoconfig wiring still TODO.
+> **Status:** v0.1 in progress &mdash; full servlet integration is wired
+> end-to-end (filter, autoconfig, `AppFirewall.record`, real
+> `@SpringBootTest`). Reactive WebFilter, health/metrics, and the CF range
+> 24 h refresh are still TODO.
 
 ## Reading order
 
@@ -76,29 +77,28 @@ once locally to generate it, or use a system-installed `gradle 8.x`.)
 | `Shipper` | ✅ | dedicated thread, gzip NDJSON, breaker, WARN-on-fail |
 | `JsonEncoder` (internal) | ✅ | hand-rolled; no JSON-lib runtime dep |
 | `Client` coordinator | ✅ | wires subsystems + builds event maps |
-| `AppFirewallFilter` (servlet) | ⏳ | `OncePerRequestFilter`; ThreadLocal context |
+| `RequestContextHolder` | ✅ | strategy facade + servlet `ThreadLocal` impl |
+| `AppFirewall` static facade | ✅ | wired to `Client` via autoconfig |
+| `AppFirewallFilter` (servlet) | ✅ | `OncePerRequestFilter`; fail-open contract |
+| `AppFirewallProperties` | ✅ | `@ConfigurationProperties("appfirewall")` |
+| `AppFirewallAutoConfiguration` | ✅ | bean wiring + filter ordering |
+| End-to-end `@SpringBootTest` | ✅ | drives traffic, asserts NDJSON output |
 | `AppFirewallWebFilter` (reactive) | ⏳ | Reactor `Context` propagation |
-| `AppFirewallAutoConfiguration` | ⏳ | bean wiring + filter ordering |
 | Health + Metrics | ⏳ | Actuator + Micrometer |
 | CF ranges 24 h refresh | ⏳ | `ScheduledExecutorService` + HttpClient |
 
-All `core/` logic is in place; everything left is the Spring Boot
-integration layer or a single non-blocking enhancement. Next priorities:
+Servlet integration is complete. Remaining work:
 
-1. `RequestContextHolder` strategies (servlet `ThreadLocal`, reactive
-   Reactor-Context) &mdash; needed by the filters and the static
-   `AppFirewall.record(...)` facade.
-2. Servlet `AppFirewallFilter` &mdash; `OncePerRequestFilter` wiring
-   `Client` end-to-end through a request.
-3. `AppFirewallAutoConfiguration` &mdash; build the `Client`, expose
-   `RateLimiter` per class, register the filter, set
-   `AppFirewall.setClient(...)`.
-4. First `@SpringBootTest` driving traffic against a real `Client` in
-   `Mode.LOCAL` and asserting the NDJSON output.
-5. Reactive `AppFirewallWebFilter`.
-6. Health + metrics.
-7. `CloudflareRangeRegistry` 24-hour background refresh
+1. Reactive `AppFirewallWebFilter` &mdash; `WebFilter` writing the
+   `RequestContext` into Reactor's `Context`. Spec §6.4 calls out the
+   `flatMap`-context-propagation caveat; document it, don't try to magic-thread.
+2. Actuator `HealthIndicator` &mdash; `UP` when breaker is CLOSED or
+   HALF_OPEN, `OUT_OF_SERVICE` when OPEN, never `DOWN`. Plus Micrometer
+   counters listed in spec §4.3.
+3. `CloudflareRangeRegistry` 24-hour background refresh
    (`ScheduledExecutorService` + `HttpClient`; fail-soft).
+4. Maven Central publishing pipeline (analogous to the Python SDK's
+   `python-fastapi-publish.yml` workflow).
 
 ## License
 

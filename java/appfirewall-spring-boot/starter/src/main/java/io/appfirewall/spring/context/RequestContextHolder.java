@@ -2,36 +2,42 @@ package io.appfirewall.spring.context;
 
 import io.appfirewall.core.context.RequestContext;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
- * Abstracts request-scope context lookup over servlet ({@link ThreadLocal})
- * and reactive (Reactor {@code Context}) stacks.
+ * Static facade that delegates to the active
+ * {@link RequestContextHolderStrategy}. The autoconfiguration installs a
+ * strategy at startup based on which Spring stack is on the classpath.
  *
- * <p>One implementation is selected at startup based on which stack is on
- * the classpath. See spec §6.4.
- *
- * <p>TODO(v0.1): wire {@code ServletRequestContextHolder} and
- * {@code ReactiveRequestContextHolder} as alternatives selected by the
- * autoconfiguration.
+ * <p>If no strategy is installed (e.g. the consumer wired the SDK manually
+ * without going through Spring autoconfiguration), {@link #current()}
+ * returns {@code null} and {@link #bind(RequestContext)} returns a no-op
+ * token. {@code AppFirewall.record(...)} treats that as "outside a request
+ * scope" and silently no-ops.
  */
 public final class RequestContextHolder {
 
+    private static final AutoCloseable NOOP_TOKEN = () -> {};
+    private static final AtomicReference<RequestContextHolderStrategy> STRATEGY = new AtomicReference<>();
+
     private RequestContextHolder() {}
 
-    /**
-     * @return the active {@link RequestContext}, or {@code null} if not in a
-     *         request scope. Never throws.
-     */
-    public static RequestContext current() {
-        // TODO: delegate to the active strategy.
-        return null;
+    public static void setStrategy(RequestContextHolderStrategy strategy) {
+        STRATEGY.set(strategy);
     }
 
-    /**
-     * Bind a context to the current scope. Returned {@link AutoCloseable}
-     * MUST be closed in a {@code finally} block.
-     */
+    /** Test/teardown helper. */
+    public static void clearStrategy() {
+        STRATEGY.set(null);
+    }
+
+    public static RequestContext current() {
+        RequestContextHolderStrategy s = STRATEGY.get();
+        return s == null ? null : s.current();
+    }
+
     public static AutoCloseable bind(RequestContext ctx) {
-        // TODO: delegate to the active strategy.
-        return () -> {};
+        RequestContextHolderStrategy s = STRATEGY.get();
+        return s == null ? NOOP_TOKEN : s.bind(ctx);
     }
 }
